@@ -1,0 +1,46 @@
+{
+  "name": "datalens-poc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "ts-node src/server.ts",
+    "dev": "nodemon --exec ts-node src/server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/mssql": "^9.1.8",
+    "@types/node": "^24.10.1",
+    "@types/pdfkit": "^0.17.4",
+    "@types/pg": "^8.16.0",
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.948.0",
+    "@azure/storage-blob": "^12.29.1",
+    "@google-cloud/storage": "^7.18.0",
+    "body-parser": "^2.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mammoth": "^1.11.0",
+    "mongodb": "^7.0.0",
+    "mssql": "^12.2.0",
+    "mysql2": "^3.15.3",
+    "neo4j-driver": "^6.0.1",
+    "nodemon": "^3.1.11",
+    "openai": "^6.10.0",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.16.3",
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,0 +1,469 @@
+[
+  {
+    "table": "bank_accounts",
+    "pii": [
+      {
+        "field": "account_number",
+        "type": "bank_account",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "account_holder_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "bank_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "branch_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "pan_number",
+        "type": "pan",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "aadhaar_number",
+        "type": "aadhaar",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "nominee_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      }
+    ]
+  },
+  {
+    "table": "customers",
+    "pii": [
+      {
+        "field": "email",
+        "type": "email",
+        "source": "regex",
+        "confidence": 0.9
+      },
+      {
+        "field": "phone",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "whatsapp_number",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "full_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "shipping_address",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "billing_address",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "company_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "contact_person",
+        "type": "name",
+        "source": "ai",
+        "confidence": 0.95
+      },
+      {
+        "field": "alternative_contact",
+        "type": "phone",
+        "source": "ai",
+        "confidence": 0.95
+      },
+      {
+        "field": "date_of_birth",
+        "type": "dob",
+        "source": "ai",
+        "confidence": 0.99
+      }
+    ]
+  },
+  {
+    "table": "employees",
+    "pii": [
+      {
+        "field": "official_email",
+        "type": "email",
+        "source": "regex",
+        "confidence": 0.9
+      },
+      {
+        "field": "personal_email",
+        "type": "email",
+        "source": "regex",
+        "confidence": 0.9
+      },
+      {
+        "field": "work_phone",
+        "type": "phone",
+        "source": "ai",
+        "confidence": 0.95
+      },
+      {
+        "field": "personal_phone",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "emergency_contact",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "full_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "father_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "mother_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "permanent_address",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "current_address",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.95
+      },
+      {
+        "field": "pan_card",
+        "type": "pan",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "aadhaar_card",
+        "type": "aadhaar",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "bank_account_number",
+        "type": "bank_account",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "bank_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "date_of_birth",
+        "type": "dob",
+        "source": "ai",
+        "confidence": 0.99
+      },
+      {
+        "field": "date_of_joining",
+        "type": "dob",
+        "source": "ai",
+        "confidence": 0.7
+      }
+    ]
+  },
+  {
+    "table": "health_records",
+    "pii": [
+      {
+        "field": "patient_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "patient_email",
+        "type": "email",
+        "source": "regex",
+        "confidence": 0.9
+      },
+      {
+        "field": "patient_phone",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "emergency_contact",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "date_of_birth",
+        "type": "dob",
+        "source": "ai",
+        "confidence": 0.99
+      },
+      {
+        "field": "address",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "doctor_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "hospital_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      }
+    ]
+  },
+  {
+    "table": "orders",
+    "pii": [
+      {
+        "field": "shipping_full_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "shipping_address_line1",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "shipping_address_line2",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.9
+      },
+      {
+        "field": "shipping_city",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.8
+      },
+      {
+        "field": "shipping_state",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.7
+      },
+      {
+        "field": "shipping_pincode",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.9
+      },
+      {
+        "field": "shipping_phone",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "billing_full_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "billing_address_line1",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "billing_address_line2",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.9
+      },
+      {
+        "field": "billing_city",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.7
+      },
+      {
+        "field": "billing_state",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.7
+      },
+      {
+        "field": "billing_pincode",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.9
+      },
+      {
+        "field": "billing_phone",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      }
+    ]
+  },
+  {
+    "table": "survey_responses",
+    "pii": [
+      {
+        "field": "respondent_email",
+        "type": "email",
+        "source": "regex",
+        "confidence": 0.9
+      },
+      {
+        "field": "respondent_phone",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "respondent_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      }
+    ]
+  },
+  {
+    "table": "users",
+    "pii": [
+      {
+        "field": "username",
+        "type": "name",
+        "source": "ai",
+        "confidence": 0.7
+      },
+      {
+        "field": "email",
+        "type": "email",
+        "source": "regex",
+        "confidence": 0.9
+      },
+      {
+        "field": "phone",
+        "type": "phone",
+        "source": "ai",
+        "confidence": 0.99
+      },
+      {
+        "field": "mobile",
+        "type": "phone",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "aadhaar_number",
+        "type": "aadhaar",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "pan_number",
+        "type": "pan",
+        "source": "regex",
+        "confidence": 0.95
+      },
+      {
+        "field": "full_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "first_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "last_name",
+        "type": "name",
+        "source": "regex",
+        "confidence": 0.7
+      },
+      {
+        "field": "date_of_birth",
+        "type": "dob",
+        "source": "ai",
+        "confidence": 0.99
+      },
+      {
+        "field": "address_line1",
+        "type": "address",
+        "source": "regex",
+        "confidence": 0.8
+      },
+      {
+        "field": "address_line2",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.9
+      },
+      {
+        "field": "city",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.7
+      },
+      {
+        "field": "pin_code",
+        "type": "address",
+        "source": "ai",
+        "confidence": 0.9
+      }
+    ]
+  }
+]
