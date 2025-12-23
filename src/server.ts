@@ -16,6 +16,7 @@ import inventoryRoutes from './routes/inventoryRoute';
 
 import exportRoutes from './routes/exportRoute';
 import activityRoutes from './routes/activityRoute';
+import dataAssetRoutes from './routes/dataAssetRoute'; // [NEW]
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use('/api/manual', questionnaireRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/data-assets', dataAssetRoutes); // [NEW]
 // app.use('/api/graph', graphRoutes); 
 
 app.post('/db-scan', async (req, res) => {

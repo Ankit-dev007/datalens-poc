@@ -11,7 +11,10 @@ export class GraphService {
                 MATCH (t:Table)-[:HAS_COLUMN]->(c:Column)
                 OPTIONAL MATCH (c)-[:IS_PII]->(p:PII)
                 OPTIONAL MATCH (f:File)-[:IS_PII]->(p)
-                RETURN t, c, p, f
+                // [NEW] Fetch Data Assets and linked Activities
+                OPTIONAL MATCH (da:DataAsset)
+                OPTIONAL MATCH (da)-[:USED_IN]->(pa:ProcessingActivity)
+                RETURN t, c, p, f, da, pa
             `);
 
             const nodesMap = new Map<string, any>();
@@ -22,6 +25,8 @@ export class GraphService {
                 const c = record.get('c');
                 const p = record.get('p');
                 const f = record.get('f');
+                const da = record.get('da');
+                const pa = record.get('pa');
 
                 // Process Table
                 if (t && !nodesMap.has(t.properties.name)) { // Using name as Unique ID helper for now, but should ideally use a unique ID
@@ -77,6 +82,34 @@ export class GraphService {
                             // Link File -> PII
                             links.push({ source: fileKey, target: piiKey });
                         }
+                    }
+                }
+
+                // Process Data Asset [NEW]
+                if (da) {
+                    const daKey = `DataAsset:${da.properties.id}`;
+                    if (!nodesMap.has(daKey)) {
+                        nodesMap.set(daKey, {
+                            id: daKey,
+                            group: 'DataAsset',
+                            val: 15,
+                            color: '#8b5cf6' // Violet
+                        });
+                    }
+
+                    // Process ProcessingActivity [NEW]
+                    if (pa) {
+                        const paKey = `Activity:${pa.properties.activityId}`;
+                        if (!nodesMap.has(paKey)) {
+                            nodesMap.set(paKey, {
+                                id: paKey,
+                                group: 'ProcessingActivity',
+                                val: 25,
+                                color: '#10b981' // Green
+                            });
+                        }
+                        // Link Data Asset -> Activity
+                        links.push({ source: daKey, target: paKey });
                     }
                 }
             });
