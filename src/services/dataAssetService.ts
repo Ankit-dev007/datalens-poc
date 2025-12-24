@@ -116,4 +116,28 @@ export class DataAssetService {
             createdAt: row.created_at
         };
     }
+
+    // Link Discovered Entity (File/Table) to Data Asset
+    async linkDiscoveryToAsset(assetId: string, discoveryName: string, type: 'File' | 'Table'): Promise<void> {
+        const driver = getNeo4jDriver();
+        if (!driver) return;
+        const session = driver.session();
+
+        try {
+            await session.run(
+                `
+                MATCH (d:DataAsset {id: $assetId})
+                MATCH (target) WHERE (target:File OR target:Table) AND target.name = $discoveryName
+                MERGE (target)-[:PART_OF_DATA_ASSET]->(d)
+                `,
+                { assetId, discoveryName }
+            );
+            console.log(`Linked ${type} '${discoveryName}' to DataAsset '${assetId}'`);
+        } catch (e) {
+            console.error("Failed to link discovery to asset:", e);
+            throw e;
+        } finally {
+            await session.close();
+        }
+    }
 }

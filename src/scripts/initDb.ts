@@ -105,6 +105,14 @@ const init = async () => {
         await pool.query(schema);
         console.log("Schema created.");
 
+        // MIGRATION: Add personal_data_categories if it doesn't exist
+        try {
+            await pool.query(`ALTER TABLE data_assets ADD COLUMN IF NOT EXISTS personal_data_categories TEXT[]`);
+            console.log("Migration: Verified personal_data_categories column.");
+        } catch (e: any) {
+            console.warn("Migration warning:", e.message);
+        }
+
         // rudimentary check to see if we seeded already (check if BFSI exists)
         const check = await pool.query("SELECT * FROM sectors WHERE name = 'BFSI'");
         if (check.rows.length === 0) {

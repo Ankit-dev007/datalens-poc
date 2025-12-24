@@ -34,4 +34,19 @@ router.get('/activity/:activityId', async (req, res) => {
     }
 });
 
+// Link Discovery to Data Asset
+router.post('/:id/link_discovery', async (req, res) => {
+    try {
+        const { discoveryName, type } = req.body;
+        if (!discoveryName || !type) {
+            res.status(400).json({ error: "discoveryName and type ('File' | 'Table') are required" });
+            return; // Add return to stop execution
+        }
+        await dataAssetService.linkDiscoveryToAsset(req.params.id, discoveryName, type);
+        res.json({ message: "Discovery linked successfully" });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 export default router;

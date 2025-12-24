@@ -39,6 +39,8 @@ app.use('/api/export', exportRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/data-assets', dataAssetRoutes); // [NEW]
 app.use('/api/hierarchy', hierarchyRoutes); // [NEW]
+import discoveryRoutes from './routes/discoveryRoutes';
+app.use('/api/discovery', discoveryRoutes);
 // app.use('/api/graph', graphRoutes); 
 
 app.post('/db-scan', async (req, res) => {
