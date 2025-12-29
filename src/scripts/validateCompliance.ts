@@ -23,11 +23,19 @@ const queries = {
     // 3. Unmapped Assets (Governance Gap)
     unmappedAssets: `
         MATCH (source) WHERE (source:File OR source:Table)
-        WHERE NOT (source)-[:PART_OF_DATA_ASSET]->()
+        OPTIONAL MATCH (source)-[:PART_OF_DATA_ASSET]->(da)
+        OPTIONAL MATCH (source)-[:AUTO_LINKED_TO]->(al)
+        WHERE da IS NULL AND al IS NULL
         RETURN source.name as UnmappedEntity, labels(source) as Type
     `,
 
-    // 4. PII with no Lawful Basis
+    // 4. Auto-Linked Assets (Review Needed)
+    autoLinkedAssets: `
+        MATCH (source)-[r:AUTO_LINKED_TO]->(d:DataAsset)
+        RETURN source.name as Entity, d.name as SuggestedAsset, r.confidence as Confidence
+    `,
+
+    // 5. PII with no Lawful Basis
     illegalPII: `
         MATCH (p:PII)<-[]-(source)-[:PART_OF_DATA_ASSET]->(d)-[:USED_IN]->(a:ProcessingActivity)
         WHERE a.permittedPurpose IS NULL OR a.permittedPurpose = ''

@@ -13,7 +13,6 @@ import graphRoutes from './routes/graphRoutes';
 import askRoutes from './routes/askRoutes';
 import questionnaireRoutes from './routes/questionnaireRoute';
 import inventoryRoutes from './routes/inventoryRoute';
-
 import exportRoutes from './routes/exportRoute';
 import activityRoutes from './routes/activityRoute';
 import dataAssetRoutes from './routes/dataAssetRoute'; // [NEW]
@@ -40,8 +39,13 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/data-assets', dataAssetRoutes); // [NEW]
 app.use('/api/hierarchy', hierarchyRoutes); // [NEW]
 import discoveryRoutes from './routes/discoveryRoutes';
+import complianceRoutes from './routes/complianceRoutes'; // [NEW]
+import configRoutes from './routes/configRoutes'; // [NEW]
 app.use('/api/discovery', discoveryRoutes);
+app.use('/api/compliance', complianceRoutes); // [NEW]
+app.use('/api/config', configRoutes); // [NEW]
 // app.use('/api/graph', graphRoutes); 
+
 
 app.post('/db-scan', async (req, res) => {
     try {
@@ -141,4 +145,8 @@ app.listen(PORT, (error: any) => {
         return;
     }
     console.log(`Server is running on port ${PORT}`);
+
+    // Start Background Jobs
+    const { startAutoLinkJob } = require('./jobs/autoLinkDiscovery.job');
+    startAutoLinkJob();
 });

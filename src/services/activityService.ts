@@ -62,7 +62,7 @@ export class ActivityService {
         if (!driver) return;
         const session = driver.session();
         try {
-            await session.run(`
+                await session.run(`
                 MERGE (a:ProcessingActivity {activityId: $activityId})
                 SET a += $props, a.updatedAt = datetime()
                 
@@ -90,41 +90,43 @@ export class ActivityService {
                     MERGE (at)-[:INSTANCE_OF]->(a)
                 }
                 `, {
-                activityId,
-                props: {
-                    name: activity.name,
-                    businessProcess: activity.businessProcess,
-                    ownerUserId: activity.ownerUserId,
-                    status: activity.status || 'Draft',
-                    purpose: activity.purpose,
-                    retentionPeriod: activity.retentionPeriod,
-                    riskScore: activity.riskScore || 0,
-                    sensitivity: activity.sensitivity || 'Internal'
-                },
-                ownerId: activity.ownerUserId,
-                processName: activity.businessProcess,
-                categories: activity.personalDataTypes || [],
-                templateId: activity.activityTemplateId || null
-            });
-        } catch (e) {
-            console.error("Neo4j Sync Failed:", e);
-        } finally {
-            await session.close();
+                    activityId,
+                    props: {
+                        name: activity.name,
+                        businessProcess: activity.businessProcess,
+                        ownerUserId: activity.ownerUserId,
+                        status: activity.status || 'Draft',
+                        purpose: activity.purpose,
+                        permittedPurpose: activity.permittedPurpose, // [FIX] Sync Lawful Basis
+                        lawfulBasis: activity.permittedPurpose, // [FIX] Alias for ComplianceService compatibility
+                        retentionPeriod: activity.retentionPeriod,
+                        riskScore: activity.riskScore || 0,
+                        sensitivity: activity.sensitivity || 'Internal'
+                    },
+                    ownerId: activity.ownerUserId,
+                    processName: activity.businessProcess,
+                    categories: activity.personalDataTypes || [],
+                    templateId: activity.activityTemplateId || null
+                });
+            } catch (e) {
+                console.error("Neo4j Sync Failed:", e);
+            } finally {
+                await session.close();
+            }
         }
-    }
 
-    async getActivity(activityId: string): Promise<ProcessingActivity | null> {
-        // Read from Postgres
-        const res = await query('SELECT * FROM processing_activities WHERE activity_id = $1', [activityId]);
-        if (res.rows.length === 0) return null;
-        return this.mapRowToActivity(res.rows[0]);
-    }
+    async getActivity(activityId: string): Promise < ProcessingActivity | null > {
+            // Read from Postgres
+            const res = await query('SELECT * FROM processing_activities WHERE activity_id = $1', [activityId]);
+            if(res.rows.length === 0) return null;
+            return this.mapRowToActivity(res.rows[0]);
+        }
 
-    async listActivities(): Promise<ProcessingActivity[]> {
-        // Read from Postgres
-        const res = await query('SELECT * FROM processing_activities ORDER BY created_at DESC');
-        return res.rows.map(this.mapRowToActivity);
-    }
+    async listActivities(): Promise < ProcessingActivity[] > {
+            // Read from Postgres
+            const res = await query('SELECT * FROM processing_activities ORDER BY created_at DESC');
+            return res.rows.map(this.mapRowToActivity);
+        }
 
     private mapRowToActivity(row: any): ProcessingActivity {
         return {

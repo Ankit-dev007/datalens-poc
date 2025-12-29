@@ -129,6 +129,11 @@ export class DataAssetService {
                 MATCH (d:DataAsset {id: $assetId})
                 MATCH (target) WHERE (target:File OR target:Table) AND target.name = $discoveryName
                 MERGE (target)-[:PART_OF_DATA_ASSET]->(d)
+                
+                // [FIX] Remove any potential "AUTO_LINKED_TO" relationship since we now have a manual confirmation
+                WITH target
+                OPTIONAL MATCH (target)-[r:AUTO_LINKED_TO]->()
+                DELETE r
                 `,
                 { assetId, discoveryName }
             );
