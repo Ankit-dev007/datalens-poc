@@ -44,6 +44,12 @@ import configRoutes from './routes/configRoutes'; // [NEW]
 app.use('/api/discovery', discoveryRoutes);
 app.use('/api/compliance', complianceRoutes); // [NEW]
 app.use('/api/config', configRoutes); // [NEW]
+
+import dataSubjectRoutes from './routes/dataSubjectRoutes'; // [NEW]
+app.use('/api/data-subjects', dataSubjectRoutes); // [NEW]
+
+import dsarRoutes from './routes/dsarRoutes'; // [NEW]
+app.use('/api/dsar', dsarRoutes); // [NEW]
 // app.use('/api/graph', graphRoutes); 
 
 

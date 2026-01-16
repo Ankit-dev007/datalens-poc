@@ -22,11 +22,9 @@ export class Neo4jWriter {
         }
 
         const session: Session = this.driver.session();
-
         try {
             await session.executeWrite(async tx => {
                 for (const tableResult of results) {
-
                     // ✅ 1. DATABASE → TABLE
                     await tx.run(
                         `
@@ -38,7 +36,6 @@ export class Neo4jWriter {
                     );
 
                     for (const pii of tableResult.pii) {
-
                         // ✅ 2. IGNORE type = "none"
                         if (pii.type === 'none') continue;
 

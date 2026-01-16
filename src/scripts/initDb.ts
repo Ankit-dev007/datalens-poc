@@ -57,6 +57,26 @@ CREATE TABLE IF NOT EXISTS data_assets (
     personal_data_categories TEXT[],
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS data_subjects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    display_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS dsar_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    data_subject_id UUID REFERENCES data_subjects(id),
+    request_type VARCHAR(50) NOT NULL, -- ACCESS, CORRECTION, ERASURE
+    status VARCHAR(50) DEFAULT 'OPEN', -- OPEN, IN_PROGRESS, REJECTED, COMPLETED
+    description TEXT,
+    due_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 const seedBFSI = async () => {
