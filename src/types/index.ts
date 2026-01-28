@@ -5,6 +5,8 @@ export interface PIIResult {
     risk?: "High" | "Medium" | "Low";
     source: 'regex' | 'ai';
     confidence: number;
+    status?: "auto_classified" | "needs_confirmation" | "confirmed" | "rejected" | "discarded";
+    reason?: string;
 }
 
 export interface TableResult {
@@ -39,6 +41,8 @@ export interface AIResponse {
     category?: string;
     risk?: string;
     confidence: number;
+    status?: "auto_classified" | "needs_confirmation" | "confirmed" | "rejected" | "discarded";
+    reason?: string;
 }
 
 export interface FileScanResult {

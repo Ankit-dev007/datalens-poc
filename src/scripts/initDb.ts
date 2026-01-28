@@ -77,6 +77,44 @@ CREATE TABLE IF NOT EXISTS dsar_requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS confirmation_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Source Context
+    source_type VARCHAR(50) DEFAULT 'database', -- 'database' | 'file'
+    source_subtype VARCHAR(50), -- 'postgres', 'mysql', 'pdf', 'csv'
+    
+    -- Database Context
+    database_name TEXT,
+    schema_name TEXT,
+    table_name TEXT,
+    column_name TEXT,
+    
+    -- File Context
+    file_path TEXT,
+    file_type VARCHAR(50),
+    file_section TEXT, -- 'Page 1', 'Row 50'
+
+    -- Detection Info
+    suggested_pii_type VARCHAR(100),
+    confidence DECIMAL,
+    reason TEXT,
+    
+    -- Workflow State
+    status VARCHAR(50) DEFAULT 'PENDING', -- PENDING, CONFIRMED, REJECTED, SKIPPED, OVERRIDDEN
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Resolution Info
+    resolved_at TIMESTAMP WITH TIME ZONE,
+    resolved_by VARCHAR(100),
+    
+    -- Audit Trail for Override
+    override_reason TEXT,
+    overridden_by VARCHAR(100),
+    overridden_at TIMESTAMP WITH TIME ZONE,
+    previous_decision_id UUID -- Reference to the original decision if this is a new override record
+);
 `;
 
 const seedBFSI = async () => {
@@ -131,6 +169,34 @@ const init = async () => {
             console.log("Migration: Verified personal_data_categories column.");
         } catch (e: any) {
             console.warn("Migration warning:", e.message);
+        }
+
+        // MIGRATION: Add audit columns to confirmation_requests
+        try {
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS override_reason VARCHAR(50)`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS overridden_by VARCHAR(255)`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS overridden_at TIMESTAMP`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS previous_decision_id UUID`);
+
+            // MIGRATION: Unified Review System
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS source_type VARCHAR(50) DEFAULT 'database'`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS source_subtype VARCHAR(50)`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS database_name TEXT`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS schema_name TEXT`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS file_path TEXT`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS file_type VARCHAR(50)`);
+            await pool.query(`ALTER TABLE confirmation_requests ADD COLUMN IF NOT EXISTS file_section TEXT`);
+
+            // Relax constraints if they exist (table_name/column_name might be null for files?) 
+            // Actually, for now let's keep them as text, but we may need to drop NOT NULL if it was set in CREATE. 
+            // The original CREATE had NOT NULL. We need to drop that constraint if we want them optional for files.
+            // checking if we need to remove NOT NULL constraints
+            await pool.query(`ALTER TABLE confirmation_requests ALTER COLUMN table_name DROP NOT NULL`);
+            await pool.query(`ALTER TABLE confirmation_requests ALTER COLUMN column_name DROP NOT NULL`);
+
+            console.log("Migration: Verified confirmation_requests audit columns.");
+        } catch (e: any) {
+            console.warn("Audit Migration warning:", e.message);
         }
 
         // rudimentary check to see if we seeded already (check if BFSI exists)

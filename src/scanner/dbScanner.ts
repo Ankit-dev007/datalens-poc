@@ -6,16 +6,25 @@ import mysql from 'mysql2/promise';
 import { Client } from 'pg';
 import sql from 'mssql';
 
+import { RuleEngine } from './ruleEngine';
+import { getCategoryForType, calculateRisk } from '../utils/riskCalculator';
+
+import { ConfirmationService } from '../services/confirmationService';
+
 export class DBScanner {
     private piiDetector: PIIDetector;
     private aiDetector: AIPIIDetector;
+    private ruleEngine: RuleEngine;
+    private confirmationService: ConfirmationService;
 
     constructor() {
         this.piiDetector = new PIIDetector();
         this.aiDetector = new AIPIIDetector();
+        this.ruleEngine = new RuleEngine();
+        this.confirmationService = new ConfirmationService();
     }
 
-    async scan(connection: mysql.Connection | Client | sql.ConnectionPool, dbType: string): Promise<TableResult[]> {
+    async scan(connection: mysql.Connection | Client | sql.ConnectionPool, dbType: string, databaseName?: string): Promise<TableResult[]> {
         const results: TableResult[] = [];
 
         try {
@@ -30,7 +39,37 @@ export class DBScanner {
 
                 for (const column of columns) {
                     let detectedPII: PIIResult | null = null;
+                    const cleanValue = rows[0] ? String(rows[0][column] || rows[0][column.toLowerCase()] || '') : '';
 
+                    // 1. Check User Rules FIRST
+                    // We only need column name for rule check, not value
+                    const ruleResult = await this.ruleEngine.checkRule(column);
+                    if (ruleResult) {
+                        if (ruleResult.is_pii) {
+                            // Use a helper or just construct object
+
+                            const category = getCategoryForType(ruleResult.type);
+                            const risk = calculateRisk(category);
+
+                            detectedPII = {
+                                field: column,
+                                type: ruleResult.type,
+                                category,
+                                risk,
+                                source: 'ai', // Technically user_rule, but compatible with UI
+                                confidence: 1.0,
+                                status: 'confirmed',
+                                reason: 'User defined rule'
+                            };
+                            tableResult.pii.push(detectedPII);
+                            continue; // Skip further checks
+                        } else {
+                            // Rule says NOT PII -> Skip
+                            continue;
+                        }
+                    }
+
+                    // 2. Scan Rows (Sample)
                     for (const row of rows) {
                         const value = String(row[column] || row[column.toLowerCase()] || ''); // Handle case sensitivity
                         if (!value) continue;
@@ -39,11 +78,40 @@ export class DBScanner {
                         const regexResult = this.piiDetector.detect(value, column);
                         if (regexResult) {
                             detectedPII = regexResult;
-                            break;
+                            break; // Found regex match (high confidence implicitly), stop checking rows
                         }
 
                         // AI Detection
                         const aiResult = await this.aiDetector.detect(value, column);
+
+                        // CASE A: Discarded (Low Confidence)
+                        if (aiResult.status === 'discarded') {
+                            // DO NOTHING.
+                            continue;
+                        }
+
+                        // CASE B: Needs Confirmation (Medium Confidence)
+                        if (aiResult.status === 'needs_confirmation') {
+                            // Create Pending Request in Postgres
+                            // Check if request already exists? Ideally yes, but for now insert.
+                            // To avoid spamming requests for every row, we break after creating one.
+                            await this.confirmationService.createRequest({
+                                source_type: 'database',
+                                source_subtype: dbType, // 'mysql', 'postgres', etc.
+                                database_name: databaseName, // We might not have this context easily in scan(), but can default.
+                                table_name: table,
+                                column_name: column,
+                                suggested_pii_type: aiResult.type,
+                                confidence: aiResult.confidence,
+                                reason: aiResult.reason || 'AI Medium Confidence'
+                            });
+                            console.log(`⚠️ Created confirmation request for ${table}.${column}`);
+
+                            // We do NOT add to tableResult.pii because it's not yet PII
+                            break;
+                        }
+
+                        // CASE C: Auto-Classified PII (High Confidence)
                         if (aiResult.is_pii) {
                             detectedPII = {
                                 field: column,
@@ -51,9 +119,11 @@ export class DBScanner {
                                 category: aiResult.category,
                                 risk: aiResult.risk as "High" | "Medium" | "Low",
                                 source: 'ai',
-                                confidence: aiResult.confidence
+                                confidence: aiResult.confidence,
+                                status: aiResult.status, // auto_classified or confirmed
+                                reason: aiResult.reason
                             };
-                            break;
+                            break; // Found AI match, stop checking rows
                         }
                     }
 

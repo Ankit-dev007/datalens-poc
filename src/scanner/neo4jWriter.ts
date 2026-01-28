@@ -53,7 +53,7 @@ export class Neo4jWriter {
                         );
 
                         // ✅ 3.5 CLEANUP EXISTING PII (Fixes Misclassifications)
-                        // Ensure a column has only ONE PII type. Delete old relationships.
+                        // Always delete old IS_PII relationship to avoid stale data
                         await tx.run(
                             `
                             MATCH (c:Column {name: $column, table: $table})-[r:IS_PII]->()
@@ -62,40 +62,78 @@ export class Neo4jWriter {
                             { table: tableResult.table, column: pii.field }
                         );
 
-                        // ✅ 4. COLUMN → PII WITH METADATA
-                        // Create PII node, Category node, and link them.
-                        await tx.run(
-                            `
-                            MERGE (p:PII {type: $piiType})
-                            
-                            // Link PII Type to Category
-                            MERGE (cat:Category {name: $category})
-                            MERGE (p)-[:BELONGS_TO]->(cat)
-                            
-                            // Link PII Type to Risk
-                            SET p.defaultRisk = $risk
-                            MERGE (risk:RiskLevel {level: $risk})
-                            MERGE (p)-[:HAS_RISK]->(risk)
+                        // ✅ CHECK STATUS
+                        if (pii.status === 'needs_confirmation') {
+                            // Store as Pending Confirmation
+                            await tx.run(
+                                `
+                                MATCH (c:Column {name: $column, table: $table})
+                                MERGE (cr:ConfirmationRequest {column: $column, table: $table})
+                                 SET cr.suggestedType = $piiType,
+                                    cr.confidence = $confidence,
+                                    cr.reason = $reason,
+                                    cr.status = 'pending_user_confirmation',
+                                    cr.createdAt = datetime()
+                                MERGE (cr)-[:FOR_COLUMN]->(c)
+                                `,
+                                {
+                                    table: tableResult.table,
+                                    column: pii.field,
+                                    piiType: pii.type,
+                                    confidence: pii.confidence,
+                                    reason: pii.reason || 'Low confidence detection'
+                                }
+                            );
+                            console.log(`⚠️ Confirmation required for ${tableResult.table}.${pii.field} (${pii.confidence})`);
 
-                            WITH p
-                            MATCH (c:Column {name: $column, table: $table})
-                            MERGE (c)-[r:IS_PII]->(p)
-                            SET 
-                              r.confidence = $confidence,
-                              r.source = $source,
-                              r.risk = $risk, 
-                              r.detectedAt = datetime()
-                            `,
-                            {
-                                table: tableResult.table,
-                                column: pii.field,
-                                piiType: pii.type,
-                                category: pii.category || 'OTHER',
-                                risk: pii.risk || 'Low',
-                                confidence: pii.confidence ?? 0,
-                                source: pii.source ?? 'unknown'
-                            }
-                        );
+                        } else {
+                            // ✅ 4. COLUMN → PII WITH METADATA (Confirmed or Auto-Classified)
+                            await tx.run(
+                                `
+                                MERGE (p:PII {type: $piiType})
+                                
+                                // Link PII Type to Category
+                                MERGE (cat:Category {name: $category})
+                                MERGE (p)-[:BELONGS_TO]->(cat)
+                                
+                                // Link PII Type to Risk
+                                SET p.defaultRisk = $risk
+                                MERGE (risk:RiskLevel {level: $risk})
+                                MERGE (p)-[:HAS_RISK]->(risk)
+
+                                WITH p
+                                MATCH (c:Column {name: $column, table: $table})
+                                MERGE (c)-[r:IS_PII]->(p)
+                                SET 
+                                  r.confidence = $confidence,
+                                  r.source = $source,
+                                  r.status = $status,
+                                  r.reason = $reason,
+                                  r.risk = $risk, 
+                                  r.detectedAt = datetime()
+                                `,
+                                {
+                                    table: tableResult.table,
+                                    column: pii.field,
+                                    piiType: pii.type,
+                                    category: pii.category || 'OTHER',
+                                    risk: pii.risk || 'Low',
+                                    confidence: pii.confidence ?? 0,
+                                    source: pii.source ?? 'unknown',
+                                    status: pii.status || 'auto_classified',
+                                    reason: pii.reason || 'AI classification'
+                                }
+                            );
+
+                            // Also cleanup any pending confirmation if it exists (since now it is decided)
+                            await tx.run(
+                                `
+                                MATCH (c:Column {name: $column, table: $table})<-[:FOR_COLUMN]-(cr:ConfirmationRequest)
+                                DETACH DELETE cr
+                                `,
+                                { table: tableResult.table, column: pii.field }
+                            );
+                        }
                     }
                 }
             });

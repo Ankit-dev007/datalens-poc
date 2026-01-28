@@ -1,4 +1,4 @@
-import { openai, deploymentName } from '../config/openaiClient';
+import { LLMFactory } from '../llm/LLMFactory';
 import { getNeo4jDriver } from '../config/neo4j';
 
 export class AnalystService {
@@ -114,8 +114,9 @@ export class AnalystService {
 
         try {
             // Step 1: Ask LLM which tool to use
-            const response = await openai.chat.completions.create({
-                model: deploymentName,
+            const llm = LLMFactory.getProvider();
+            const response = await llm.chat({
+                model: 'deployment-name-ignored-by-factory', // Factory/Provider handles model selection
                 messages: [{ role: "system", content: "You are a DPDP Compliance AI. Use the provided tools to answer user questions. Do not make assumptions." }, { role: "user", content: userQuery }],
                 tools: tools as any,
                 tool_choice: "auto",
@@ -234,8 +235,8 @@ export class AnalystService {
             }
 
             // Step 3: Interpret Results
-            const interpretation = await openai.chat.completions.create({
-                model: deploymentName,
+            const interpretation = await llm.chat({
+                model: 'deployment-name-ignored-by-factory',
                 messages: [
                     { role: "system", content: "Summarize these compliance results for the user. Keep it brief." },
                     { role: "user", content: JSON.stringify(results) }

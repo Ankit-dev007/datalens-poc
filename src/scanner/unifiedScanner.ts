@@ -25,7 +25,7 @@ export class UnifiedScanner {
             if (request.dbType === 'mongo') {
                 results = await this.mongoScanner.scan(connection as any);
             } else {
-                results = await this.dbScanner.scan(connection as any, request.dbType);
+                results = await this.dbScanner.scan(connection as any, request.dbType, request.database);
             }
             if (results.length > 0) {
                 const dbName = request.database || `${request.dbType}_db`;

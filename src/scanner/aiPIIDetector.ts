@@ -1,4 +1,4 @@
-import { openai, deploymentName } from "../config/openaiClient";
+import { LLMFactory } from "../llm/LLMFactory";
 import { AIResponse } from "../types";
 import { calculateRisk, getCategoryForType } from "../utils/riskCalculator";
 
@@ -27,10 +27,8 @@ function safeParseJSON(text: string): any | null {
 export class AIPIIDetector {
 
     async detect(value: string, fieldName: string): Promise<AIResponse> {
-        // If OpenAI not configured → fallback
-        if (!openai) {
-            return this.mockDetect(value, fieldName);
-        }
+        // Use Factory to get provider
+        const llm = LLMFactory.getProvider();
 
         const prompt = `
 CRITICAL RULE:
@@ -59,17 +57,23 @@ Rules:
    - other: religion, caste, political_opinion
    - none
 
+5. CONFIDENCE & STATUS:
+   - confidence: 0.0 to 1.0
+   - status: "auto_classified" | "needs_confirmation"
+   - if confidence < 0.6, status MUST be "needs_confirmation"
+
 Return JSON only:
 {
-  "is_pii": boolean,
   "type": "string",
-  "confidence": number
+  "confidence": number,
+  "status": "auto_classified" | "needs_confirmation",
+  "reason": "short explanation"
 }
 `;
 
         try {
-            const completion = await openai.chat.completions.create({
-                model: deploymentName,
+            const completion = await llm.chat({
+                model: 'model-ignored',
                 response_format: { type: "json_object" },
                 messages: [{ role: "user", content: prompt }],
                 temperature: 0,
@@ -83,33 +87,60 @@ Return JSON only:
 
             const parsed = safeParseJSON(content);
 
-            // 🚨 Guard against broken AI responses
+            // 1. Validate structure (Relaxed: type/is_pii not strictly required to be non-null/true)
             if (
                 !parsed ||
-                typeof parsed.is_pii !== "boolean" ||
-                typeof parsed.type !== "string"
+                typeof parsed.confidence !== "number" ||
+                typeof parsed.status !== "string"
             ) {
-                console.warn("⚠️ Invalid AI response, fallback used:", content);
+                console.warn("⚠️ Invalid AI response structure (missing confidence/status), fallback used:", content);
                 return this.mockDetect(value, fieldName);
             }
 
-            if (parsed.is_pii && parsed.type !== "none") {
-                const category = getCategoryForType(parsed.type);
-                const risk = calculateRisk(category);
+            // 2. Normalize Data
+            let type = parsed.type || "none";
+            let confidence = Number(parsed.confidence);
+            let reason = parsed.reason || "AI classification";
 
-                return {
-                    is_pii: true,
-                    type: parsed.type,
-                    category,
-                    risk,
-                    confidence: Number(parsed.confidence ?? 0.5),
-                };
+            // 3. Centralized Backend Decision Logic
+            // Helper for deterministic status
+            const mapConfidenceToStatus = (conf: number): "auto_classified" | "needs_confirmation" | "discarded" => {
+                if (conf >= 0.8) return "auto_classified";
+                if (conf >= 0.50) return "needs_confirmation";
+                return "discarded";
+            };
+
+            const status = mapConfidenceToStatus(confidence);
+
+            // Determine is_pii authoritative status
+            // PII is ONLY true if we are confident enough to auto-classify or it's implicitly confirmed (though LLM returns auto/needs_conf).
+            // 'needs_confirmation' implies it MIGHT be PII, but is_pii flag is typically for "found and verified/confident" results in some contexts.
+            // However, the requirement says: "- Set is_pii = true ONLY for: - auto_classified - confirmed"
+            // So if status is 'needs_confirmation', is_pii MUST be false here.
+
+            const is_pii = (status === "auto_classified");
+
+            // 4. Calculate Derived Fields (Risk, Category)
+            let category = undefined;
+            let risk = undefined;
+
+            if (type !== "none" && status !== "discarded") {
+                category = getCategoryForType(type);
+                risk = calculateRisk(category);
             }
 
-            return { is_pii: false, type: "none", confidence: 0 };
+            return {
+                is_pii,
+                type,
+                category,
+                risk,
+                confidence,
+                status,
+                reason
+            };
 
         } catch (err) {
-            console.error("❌ Azure AI failed, fallback used:", err);
+            console.error("❌ AI failed, fallback used:", err);
             return this.mockDetect(value, fieldName);
         }
     }
@@ -120,22 +151,38 @@ Return JSON only:
     private mockDetect(value: string, fieldName: string): AIResponse {
         const lower = fieldName.toLowerCase();
 
+        // Helper to construct consistent response
+        const makeResponse = (type: string, category: string, risk: "High" | "Medium" | "Low", confidence: number): AIResponse => {
+            // Apply same logic: >= 0.8 is auto_classified -> is_pii=true
+            const status = confidence >= 0.8 ? "auto_classified" : "needs_confirmation";
+            const is_pii = status === "auto_classified";
+            return {
+                is_pii,
+                type,
+                category,
+                risk,
+                confidence,
+                status,
+                reason: "Fallback regex match"
+            };
+        };
+
         if (lower.includes("email")) {
-            return { is_pii: true, type: "email", category: "CONTACT", risk: "Medium", confidence: 0.9 };
+            return makeResponse("email", "CONTACT", "Medium", 0.9);
         }
         if (lower.includes("phone") || lower.includes("mobile")) {
-            return { is_pii: true, type: "phone", category: "CONTACT", risk: "Medium", confidence: 0.9 };
+            return makeResponse("phone", "CONTACT", "Medium", 0.9);
         }
         if (lower.includes("aadhaar")) {
-            return { is_pii: true, type: "aadhaar", category: "IDENTITY", risk: "High", confidence: 0.95 };
+            return makeResponse("aadhaar", "IDENTITY", "High", 0.95);
         }
         if (lower.includes("pan")) {
-            return { is_pii: true, type: "pan", category: "IDENTITY", risk: "High", confidence: 0.95 };
+            return makeResponse("pan", "IDENTITY", "High", 0.95);
         }
         if (lower.includes("salary")) {
-            return { is_pii: true, type: "salary", category: "FINANCIAL", risk: "High", confidence: 0.9 };
+            return makeResponse("salary", "FINANCIAL", "High", 0.9);
         }
 
-        return { is_pii: false, type: "none", confidence: 0 };
+        return { is_pii: false, type: "none", confidence: 0, status: "auto_classified", reason: "Fallback: Not PII" };
     }
 }

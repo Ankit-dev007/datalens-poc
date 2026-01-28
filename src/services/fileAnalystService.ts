@@ -1,4 +1,4 @@
-import { openai, deploymentName } from '../config/openaiClient';
+import { LLMFactory } from '../llm/LLMFactory';
 import { calculateRisk, getCategoryForType } from '../utils/riskCalculator';
 
 interface PIIResult {
@@ -16,7 +16,14 @@ interface FileAnalysisResult {
     recommendations: string[];
 }
 
+import { ConfirmationService } from './confirmationService';
+
 export class FileAnalystService {
+    private confirmationService: ConfirmationService;
+
+    constructor() {
+        this.confirmationService = new ConfirmationService();
+    }
 
     async analyzeFile(fileName: string, filePath: string, storageType: string, fileText: string): Promise<FileAnalysisResult> {
         const strictPII: PIIResult[] = [];
@@ -102,9 +109,10 @@ STRICT RULES:
 `;
         let aiPII: PIIResult[] = [];
         try {
-            if (openai) {
-                const response = await openai.chat.completions.create({
-                    model: deploymentName,
+            const llm = LLMFactory.getProvider();
+            if (llm) {
+                const response = await llm.chat({
+                    model: 'model-ignored',
                     messages: [{ role: "user", content: aiPrompt }], // Changed system to user to be safe with some models
                     response_format: { type: "json_object" },
                     temperature: 0
@@ -112,18 +120,51 @@ STRICT RULES:
                 const content = response.choices[0]?.message?.content;
                 if (content) {
                     const parsed = JSON.parse(content);
+
+                    // Process AI Results
                     if (parsed.pii && Array.isArray(parsed.pii)) {
-                        aiPII = parsed.pii.map((p: any) => {
+                        for (const p of parsed.pii) {
+                            if (p.type === 'none') continue;
+
                             const category = getCategoryForType(p.type);
-                            return {
+                            const risk = calculateRisk(category);
+
+                            // LOGIC: Deterministic Thresholds
+                            // < 0.50 : Discard
+                            // >= 0.50 && < 0.80 : Confirmation
+                            // >= 0.80 : Auto-Classified
+
+                            if (p.confidence < 0.50) {
+                                // Discarded
+                                continue;
+                            }
+
+                            if (p.confidence >= 0.50 && p.confidence < 0.80) {
+                                await this.confirmationService.createRequest({
+                                    source_type: 'file',
+                                    source_subtype: storageType, // e.g. 'local', 'azure_blob'
+                                    file_path: filePath,
+                                    file_type: fileName.split('.').pop() || 'unknown',
+                                    file_section: 'Text Content', // Could be refined if we had page numbers
+                                    suggested_pii_type: p.type,
+                                    confidence: p.confidence,
+                                    reason: `AI detected ${p.type} in file content (Medium Confidence)`
+                                });
+                                console.log(`Created confirmation request for file ${fileName} (${p.type})`);
+                                // Do NOT add to strictPII/aiPII so it doesn't get written to Graph/Report as confirmed yet.
+                                continue;
+                            }
+
+                            // High confidence (>= 0.80) -> Add to results
+                            aiPII.push({
                                 type: p.type,
                                 category: category,
                                 risk: calculateRisk(category),
                                 value_sample: p.value_sample,
                                 confidence: p.confidence,
-                                reason: "AI detected via context analysis"
-                            };
-                        }).filter((p: any) => p.type !== 'none');
+                                reason: "AI detected via context analysis (High Confidence)"
+                            });
+                        }
                     }
                 }
             }

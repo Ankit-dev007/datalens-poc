@@ -50,6 +50,10 @@ app.use('/api/data-subjects', dataSubjectRoutes); // [NEW]
 
 import dsarRoutes from './routes/dsarRoutes'; // [NEW]
 app.use('/api/dsar', dsarRoutes); // [NEW]
+
+import confirmationRoutes from './routes/confirmationRoutes';
+app.use('/api/confirmations', confirmationRoutes);
+
 // app.use('/api/graph', graphRoutes); 
 
 
@@ -154,5 +158,5 @@ app.listen(PORT, (error: any) => {
 
     // Start Background Jobs
     const { startAutoLinkJob } = require('./jobs/autoLinkDiscovery.job');
-    startAutoLinkJob();
+    // startAutoLinkJob();
 });

@@ -1,11 +1,12 @@
 import { getNeo4jDriver } from '../config/neo4j';
-import { openai, deploymentName } from '../config/openaiClient';
+import { LLMFactory } from '../llm/LLMFactory';
 
 export class AskService {
     async askQuestion(question: string) {
         const driver = getNeo4jDriver();
         if (!driver) throw new Error('Neo4j driver not initialized');
         const session = driver.session();
+        const llm = LLMFactory.getProvider();
 
         try {
             // 1. Convert Question to Cypher using OpenAI
@@ -26,8 +27,8 @@ export class AskService {
                 Question: ${question}
             `;
 
-            const completion = await openai.chat.completions.create({
-                model: deploymentName,
+            const completion = await llm.chat({
+                model: 'model-ignored',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: question }
@@ -64,8 +65,8 @@ export class AskService {
                 Results: ${JSON.stringify(cleanRecords)}
             `;
 
-            const answerCompletion = await openai.chat.completions.create({
-                model: deploymentName,
+            const answerCompletion = await llm.chat({
+                model: 'model-ignored',
                 messages: [{ role: 'system', content: answerPrompt }],
                 temperature: 0.5,
             });
